@@ -1,0 +1,15 @@
+source:
+  url: ${PG_FEED_DATABASE_URL}
+  slot: pg_feed
+  publication: pg_feed
+  create_if_missing: true
+  tables: ["*"]
+store:
+  path: /data/pg-feed.db
+  retention:
+    days: 7
+    max_size: 1GB
+    sweep_every: 5m
+server:
+  listen: ":9040"
+  tokens: ${PG_FEED_TOKENS}

@@ -1,0 +1,33 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - run: go vet ./...
+      - run: go test ./...
+      - run: CGO_ENABLED=0 go build -o /dev/null ./cmd/pg-feed
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: mkdir -p data/postgres data/feed && sudo chown 65532 data/feed
+      - run: docker compose up -d --build --wait
+      - name: write and read back
+        run: |
+          docker compose exec -T postgres psql -U feed -d feed -c \
+            "insert into \"order\".parking_logs values ('p1','BR01AB1234','AT_GATE',null,'{\"gate\":1}')"
+          sleep 2
+          curl -sf -H 'Authorization: Bearer dev-token' 'localhost:9040/v1/events' | tee /dev/stderr | grep -q '"table":"parking_logs"'
+      - if: always()
+        run: docker compose logs pg-feed

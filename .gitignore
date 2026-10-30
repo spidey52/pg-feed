@@ -1,0 +1,9 @@
+/pg-feed
+/dist
+/data
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.*
+!.env.example

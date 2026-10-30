@@ -1,0 +1,36 @@
+# Local run: a Postgres with logical replication on, and the feed reading it.
+#   docker compose up -d --build
+#   curl -H 'Authorization: Bearer dev-token' localhost:9040/v1/status
+# Data lives under ./data (git-ignored). The feed runs as uid 65532 (distroless
+# nonroot); on a Linux host run `mkdir -p data/feed && sudo chown 65532 data/feed`
+# once. Docker Desktop on macOS/Windows needs nothing.
+services:
+  postgres:
+    image: postgres:18-alpine
+    command: ["postgres", "-c", "wal_level=logical", "-c", "max_slot_wal_keep_size=1GB"]
+    environment:
+      POSTGRES_USER: feed
+      POSTGRES_PASSWORD: feed
+      POSTGRES_DB: feed
+    ports: ["5440:5432"]
+    volumes:
+      - ./compose/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./data/postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U feed -d feed"]
+      interval: 2s
+      retries: 30
+
+  pg-feed:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PG_FEED_DATABASE_URL: postgresql://feed:feed@postgres:5432/feed?sslmode=disable
+      PG_FEED_TOKENS: dev-token
+    volumes:
+      - ./compose/pg-feed.yaml:/etc/pg-feed/config.yaml:ro
+      - ./data/feed:/data
+    ports: ["9040:9040"]
+    restart: unless-stopped

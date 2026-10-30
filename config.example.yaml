@@ -1,0 +1,22 @@
+# ${VAR} is replaced from the environment when the file is read.
+source:
+  url: ${PG_FEED_DATABASE_URL}
+  slot: pg_feed
+  publication: pg_feed
+  # Create the slot and publication when they do not exist. Off by default so
+  # pointing the service at the wrong database does nothing.
+  create_if_missing: false
+  # Tables to keep. "schema.*" = every table in the schema, "*" = everything.
+  # Also used to create the publication when create_if_missing is on.
+  tables: ["*"]
+
+store:
+  path: ./data/pg-feed.db
+  retention:
+    days: 30
+    max_size: 10GB
+    sweep_every: 10m
+
+server:
+  listen: ":9040"
+  tokens: ${PG_FEED_TOKENS}

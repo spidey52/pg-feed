@@ -1,0 +1,7 @@
+.git
+data
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.*
